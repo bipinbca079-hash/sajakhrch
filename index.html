@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sajakhrch | Roommate Expense Tracker</title>
+    <meta name="description" content="Simple and beautiful expense tracker for roommates.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Sync Library (No Setup Required!) -->
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+    
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2489/2489756.png">
+</head>
+<body class="light-mode">
+    <div id="app">
+        <!-- Header -->
+        <header>
+            <div class="header-content">
+                <div class="user-info" id="current-user-display" style="cursor: pointer;">
+                    <div class="avatar" id="user-avatar">?</div>
+                    <div>
+                        <h1 id="user-welcome">Who are you?</h1>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <span id="sync-status" class="status-dot offline"></span>
+                            <p id="current-date"></p>
+                        </div>
+                    </div>
+                </div>
+                <button id="theme-toggle" class="icon-btn" aria-label="Toggle Theme">
+                    <i data-lucide="moon"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main id="main-content">
+            <!-- Dashboard View -->
+            <section id="dashboard-view" class="view active">
+                <div class="summary-cards">
+                    <div class="card main-card">
+                        <span class="card-label">Total Spent This Month</span>
+                        <h2 id="total-month-spend">₹0.00</h2>
+                        <div class="balance-info">
+                            <div class="balance-item">
+                                <span class="dot you"></span>
+                                <span>You: <strong id="my-total">₹0</strong></span>
+                            </div>
+                            <div class="balance-item">
+                                <span class="dot friend"></span>
+                                <span>Friend: <strong id="friend-total">₹0</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card status-card" id="balance-card">
+                        <div class="status-icon">
+                            <i data-lucide="info"></i>
+                        </div>
+                        <div class="status-details">
+                            <p id="balance-text">Settled Up</p>
+                            <h3 id="balance-amount">₹0.00</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-header">
+                    <h3>Analytics</h3>
+                </div>
+                <div class="card chart-card">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+
+                <div class="section-header">
+                    <h3>Recent Transactions</h3>
+                    <button class="text-btn" onclick="navigateTo('history')">See All</button>
+                </div>
+                <div id="recent-expenses" class="expense-list">
+                    <!-- Expenses will be injected here -->
+                    <div class="empty-state">
+                        <i data-lucide="plus-circle"></i>
+                        <p>No expenses yet. Add one!</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- History View -->
+            <section id="history-view" class="view">
+                <div class="search-filter-container">
+                    <div class="search-bar">
+                        <i data-lucide="search"></i>
+                        <input type="text" id="search-input" placeholder="Search expenses...">
+                    </div>
+                    <div class="filter-chips">
+                        <button class="chip active" data-category="all">All</button>
+                        <button class="chip" data-category="Food">Food</button>
+                        <button class="chip" data-category="Rent">Rent</button>
+                        <button class="chip" data-category="Utilities">Utilities</button>
+                        <button class="chip" data-category="Groceries">Groceries</button>
+                    </div>
+                </div>
+                <div id="full-expense-list" class="expense-list">
+                    <!-- Full list will be injected here -->
+                </div>
+            </section>
+
+            <!-- Analytics View -->
+            <section id="analytics-view" class="view">
+                <div class="section-header">
+                    <h3>Spending by User</h3>
+                </div>
+                <div id="user-stats-list" class="expense-list">
+                    <!-- User spending summaries go here -->
+                </div>
+                <div class="card chart-card">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Users View (Folders) -->
+            <section id="users-view" class="view">
+                <div class="section-header">
+                    <h3>Folders</h3>
+                    <button class="btn secondary sm" id="add-user-btn">
+                        <i data-lucide="user-plus"></i> Add Person
+                    </button>
+                </div>
+                <div id="user-folders" class="user-grid">
+                    <!-- User folders will be injected here -->
+                </div>
+            </section>
+
+            <!-- User Detail View (Injected dynamically) -->
+            <section id="user-detail-view" class="view">
+                <div class="section-header">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <button class="icon-btn sm" onclick="navigateTo('users')">
+                            <i data-lucide="arrow-left"></i>
+                        </button>
+                        <h3 id="detail-user-name">User's Expenses</h3>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="icon-btn sm" id="edit-folder-btn" title="Edit Name">
+                            <i data-lucide="edit-3"></i>
+                        </button>
+                        <button class="icon-btn sm" id="delete-folder-btn" style="color: var(--danger)" title="Delete Folder">
+                            <i data-lucide="trash-2"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; margin-bottom: 1rem;">
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">Total Balance</span>
+                    <div id="detail-user-total" class="badge">₹0</div>
+                </div>
+
+                <div class="section-header">
+                    <h3>Expenses</h3>
+                    <button class="btn primary sm" id="add-expense-to-folder-btn">
+                        <i data-lucide="plus"></i> Add Item
+                    </button>
+                </div>
+                
+                <div id="user-specific-expenses" class="expense-list"></div>
+            </section>
+
+            <!-- Settings View -->
+            <section id="settings-view" class="view">
+                <div class="card">
+                    <h3>Preferences</h3>
+                    <div class="settings-item">
+                        <span>Currency</span>
+                        <select id="currency-select">
+                            <option value="₹">INR (₹)</option>
+                            <option value="$">USD ($)</option>
+                            <option value="€">EUR (€)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Data Management</h3>
+                    <button class="btn secondary" id="export-btn">
+                        <i data-lucide="download"></i> Export to JSON
+                    </button>
+                    <button class="btn secondary" id="refresh-btn">
+                        <i data-lucide="refresh-cw"></i> Force Refresh
+                    </button>
+                    <button class="btn primary" id="share-btn">
+                        <i data-lucide="share-2"></i> Share with Friends
+                    </button>
+                    <button class="btn danger" id="clear-btn">
+                        <i data-lucide="trash-2"></i> Clear All Data
+                    </button>
+                </div>
+                <div class="card">
+                    <h3>Deletion Log</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Track who deleted what.</p>
+                    <div id="deletion-log" class="expense-list">
+                        <!-- Deletion logs will be injected here -->
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" onclick="navigateTo('dashboard')">
+                <i data-lucide="layout-dashboard"></i>
+                <span>Home</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('users')">
+                <i data-lucide="folder"></i>
+                <span>Folders</span>
+            </button>
+            <div class="nav-fab" id="add-expense-trigger">
+                <i data-lucide="plus"></i>
+            </div>
+            <button class="nav-item" onclick="navigateTo('history')">
+                <i data-lucide="list"></i>
+                <span>All</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('settings')">
+                <i data-lucide="settings"></i>
+                <span>Settings</span>
+            </button>
+        </nav>
+
+        <!-- Modal for Add/Edit Expense -->
+        <div id="expense-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modal-title">Add Expense</h2>
+                    <button id="close-modal" class="icon-btn"><i data-lucide="x"></i></button>
+                </div>
+                <form id="expense-form">
+                    <input type="hidden" id="expense-id">
+                    <div class="form-group">
+                        <label for="expense-name">What for?</label>
+                        <input type="text" id="expense-name" placeholder="e.g. Pizza, Electricity Bill" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="expense-amount">Amount</label>
+                            <input type="number" id="expense-amount" placeholder="0.00" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="expense-qty">Qty</label>
+                            <input type="number" id="expense-qty" value="1" min="1" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="expense-category">Category</label>
+                            <select id="expense-category">
+                                <option value="Food">Food</option>
+                                <option value="Rent">Rent</option>
+                                <option value="Groceries">Groceries</option>
+                                <option value="Utilities">Utilities</option>
+                                <option value="Entertainment">Entertainment</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="expense-date">Date</label>
+                            <input type="date" id="expense-date" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="expense-payer">Who Paid?</label>
+                        <select id="expense-payer" required>
+                            <!-- Dynamic users will be injected here -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="expense-notes">Notes (Optional)</label>
+                        <textarea id="expense-notes" rows="2" placeholder="Any details..."></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn primary flex-1">Save Expense</button>
+                        <button type="button" id="delete-expense-btn" class="btn danger hidden">
+                            <i data-lucide="trash-2"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal for Add User -->
+        <div id="user-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="user-modal-title">Add New Person</h2>
+                    <button id="close-user-modal" class="icon-btn"><i data-lucide="x"></i></button>
+                </div>
+                <form id="user-form">
+                    <div class="form-group">
+                        <label for="user-name">Name</label>
+                        <input type="text" id="user-name" placeholder="e.g. Bipin, Ram" required>
+                    </div>
+                    <button type="submit" class="btn primary full-width" id="user-submit-btn">Create Folder</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal for Identity Selection -->
+        <div id="identity-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Who are you?</h2>
+                </div>
+                <div class="form-group">
+                    <p style="margin-bottom: 1rem; color: var(--text-muted);">Select your name to track your actions.</p>
+                    <div id="identity-list" class="user-grid">
+                        <!-- Users will be injected here -->
+                    </div>
+                </div>
+                <button class="btn secondary full-width" onclick="elements.userModal.classList.add('active'); elements.identityModal.classList.remove('active');">
+                    <i data-lucide="user-plus"></i> I'm not here, add me
+                </button>
+            </div>
+        </div>
+    </div> <!-- End of #app -->
+
+    <script src="app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+</body>
+</html>
