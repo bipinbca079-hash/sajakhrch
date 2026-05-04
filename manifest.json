@@ -1,0 +1,17 @@
+{
+    "name": "Sajakhrch Roommate Tracker",
+    "short_name": "Sajakhrch",
+    "description": "Simple expense tracking for roommates.",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#f8fafc",
+    "theme_color": "#6366f1",
+    "icons": [
+        {
+            "src": "https://cdn-icons-png.flaticon.com/512/2489/2489756.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}
